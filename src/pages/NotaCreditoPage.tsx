@@ -17,9 +17,11 @@ import {
   X,
 } from 'lucide-react';
 import type { Documento, ItemDocumento, MotivoNC } from '@/types';
+import { descargarPDF } from '@/utils/fileExport';
+import { enviarCorreoDocumento } from '@/utils/email';
 
 export default function NotaCreditoPage() {
-  const { documentos, clientes, contribuyente, contingenciaActiva, addDocumento, addToast, navigate } = useApp();
+  const { documentos, clientes, contribuyente, contingenciaActiva, addDocumento, updateDocumento, addToast, navigate } = useApp();
 
   const [search, setSearch] = useState('');
   const [docOriginalId, setDocOriginalId] = useState('');
@@ -133,7 +135,7 @@ export default function NotaCreditoPage() {
         codigoRecepcion: contingenciaActiva ? 'PEND-' + generarId() : generarCodigoRecepcion(),
         ambiente: contribuyente.ambiente,
         envioCorreo: correoDestino
-          ? { destinatario: correoDestino, fechaEnvio: new Date().toISOString(), estado: 'Enviado' }
+          ? { destinatario: correoDestino, fechaEnvio: new Date().toISOString(), estado: 'Pendiente' }
           : null,
         documentoOriginalId: docOriginal!.id,
         documentoOriginalNumero: docOriginal!.numeroGeneracion,
@@ -145,8 +147,21 @@ export default function NotaCreditoPage() {
       addDocumento(doc);
       setResultado(doc);
 
-      if (correoDestino) {
-        addToast('exito', `Nota de crédito enviada a ${correoDestino}`);
+      if (correoDestino && doc.estado !== 'Contingencia') {
+        void enviarCorreoDocumento(doc, contribuyente, correoDestino).then((resultadoCorreo) => {
+          addToast(
+            resultadoCorreo.ok ? 'exito' : 'error',
+            resultadoCorreo.ok
+              ? `Nota de crédito enviada a ${correoDestino}`
+              : `No se pudo enviar el correo: ${resultadoCorreo.error}`,
+          );
+          updateDocumento({
+            ...doc,
+            envioCorreo: doc.envioCorreo
+              ? { ...doc.envioCorreo, estado: resultadoCorreo.ok ? 'Enviado' : 'Fallido' }
+              : null,
+          });
+        });
       } else {
         addToast('exito', 'Nota de crédito emitida correctamente');
       }
@@ -200,7 +215,7 @@ export default function NotaCreditoPage() {
             <button onClick={() => navigate('detalle-documento', { id: resultado.id })} className="btn-secondary">
               <FileText className="h-4 w-4" /> Ver documento
             </button>
-            <button onClick={() => addToast('info', `Descargando PDF: ${resultado.numeroGeneracion}.pdf`)} className="btn-secondary">
+            <button onClick={() => { descargarPDF(resultado, contribuyente); addToast('exito', `PDF descargado: ${resultado.numeroGeneracion}.pdf`); }} className="btn-secondary">
               <Download className="h-4 w-4" /> Descargar PDF
             </button>
             <button onClick={() => { setResultado(null); setDocOriginalId(''); setItemsNC([]); setMotivo(''); setMotivoDetalle(''); }} className="btn-primary">

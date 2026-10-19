@@ -19,6 +19,8 @@ import {
   X,
 } from 'lucide-react';
 import type { Producto, ItemDocumento, MetodoPago, Documento, TipoDocumento } from '@/types';
+import { descargarJSON, descargarPDF } from '@/utils/fileExport';
+import { enviarCorreoDocumento } from '@/utils/email';
 
 interface PuntoVentaProps {
   tipoDocumento: TipoDocumento;
@@ -29,7 +31,7 @@ interface PuntoVentaProps {
 }
 
 export default function PuntoVenta({ tipoDocumento, requiereContribuyente, titulo, subtitulo, mensajeAyuda }: PuntoVentaProps) {
-  const { productos, clientes, contribuyente, contingenciaActiva, addDocumento, addToast, navigate } = useApp();
+  const { productos, clientes, contribuyente, contingenciaActiva, addDocumento, updateDocumento, addToast, navigate } = useApp();
 
   const [clienteId, setClienteId] = useState('');
   const [clienteError, setClienteError] = useState('');
@@ -142,6 +144,10 @@ export default function PuntoVenta({ tipoDocumento, requiereContribuyente, titul
       setClienteError('El cliente contribuyente debe tener NIT y NRC');
       return false;
     }
+    if (metodoPago === 'Efectivo' && montoRecibido < total) {
+      addToast('error', `El monto recibido debe ser al menos ${formatMoneda(total)} incluyendo IVA`);
+      return false;
+    }
     return true;
   };
 
@@ -183,7 +189,7 @@ export default function PuntoVenta({ tipoDocumento, requiereContribuyente, titul
           ? {
               destinatario: correoDestino,
               fechaEnvio: new Date().toISOString(),
-              estado: 'Enviado',
+              estado: 'Pendiente',
             }
           : null,
       };
@@ -191,8 +197,21 @@ export default function PuntoVenta({ tipoDocumento, requiereContribuyente, titul
       addDocumento(doc);
       setResultado(doc);
 
-      if (correoDestino) {
-        addToast('exito', `Documento enviado a ${correoDestino}`);
+      if (correoDestino && !enContingencia) {
+        void enviarCorreoDocumento(doc, contribuyente, correoDestino).then((resultadoCorreo) => {
+          addToast(
+            resultadoCorreo.ok ? 'exito' : 'error',
+            resultadoCorreo.ok
+              ? `Correo enviado a ${correoDestino}`
+              : `No se pudo enviar el correo: ${resultadoCorreo.error}`,
+          );
+          updateDocumento({
+            ...doc,
+            envioCorreo: doc.envioCorreo
+              ? { ...doc.envioCorreo, estado: resultadoCorreo.ok ? 'Enviado' : 'Fallido' }
+              : null,
+          });
+        });
       } else if (enContingencia) {
         addToast('advertencia', 'Documento emitido en contingencia. Se transmitirá al MH cuando se restablezca la conexión.');
       } else {
@@ -212,12 +231,14 @@ export default function PuntoVenta({ tipoDocumento, requiereContribuyente, titul
 
   const handleDescargarPDF = () => {
     if (!resultado) return;
-    addToast('info', `Descargando PDF: ${resultado.numeroGeneracion}.pdf`);
+    descargarPDF(resultado, contribuyente);
+    addToast('exito', `PDF descargado: ${resultado.numeroGeneracion}.pdf`);
   };
 
   const handleDescargarJSON = () => {
     if (!resultado) return;
-    addToast('info', `Descargando JSON: ${resultado.numeroGeneracion}.json`);
+    descargarJSON(resultado, contribuyente);
+    addToast('exito', `JSON descargado: ${resultado.numeroGeneracion}.json`);
   };
 
   // === RENDER RESULTADO ===
@@ -530,6 +551,9 @@ export default function PuntoVenta({ tipoDocumento, requiereContribuyente, titul
                 <span className="text-neutral-500">IVA 13%</span>
                 <span className="font-medium text-neutral-700">{formatMoneda(iva)}</span>
               </div>
+              <div className="rounded-lg bg-primary-50 px-3 py-2 text-xs text-primary-800">
+                El cliente debe pagar <strong>{formatMoneda(total)}</strong>, incluyendo {formatMoneda(iva)} de IVA.
+              </div>
               <div className="border-t border-neutral-200 pt-2">
                 <div className="flex justify-between">
                   <span className="font-bold text-neutral-800">Total a pagar</span>
@@ -573,6 +597,11 @@ export default function PuntoVenta({ tipoDocumento, requiereContribuyente, titul
                       <span className="text-success-700">Cambio</span>
                       <span className="font-bold text-success-700">{formatMoneda(cambio)}</span>
                     </div>
+                  )}
+                  {montoRecibido > 0 && montoRecibido < total && (
+                    <p className="text-xs text-error-600">
+                      Faltan {formatMoneda(total - montoRecibido)} para completar el pago.
+                    </p>
                   )}
                 </div>
               )}

@@ -17,7 +17,7 @@ export default function LoginPage() {
     return regex.test(val);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setCorreoError('');
@@ -32,11 +32,9 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      // Login simulado: cualquier correo y contraseña
-      login(correo, password);
-    }, 800);
+    const result = await login(correo, password);
+    setLoading(false);
+    if (result.error) setError(result.error);
   };
 
   return (

@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatFechaHora, generarId } from '@/utils/format';
 import { HardDriveDownload, Download, Loader2, CheckCircle2, Database } from 'lucide-react';
+import { descargarBackup } from '@/utils/fileExport';
 
 export default function RespaldoPage() {
-  const { backups, addBackup, addToast } = useApp();
+  const { backups, addBackup, addToast, contribuyente, productos, clientes, documentos } = useApp();
   const [generando, setGenerando] = useState(false);
 
   const handleGenerar = () => {
@@ -15,7 +16,8 @@ export default function RespaldoPage() {
       const mes = String(ahora.getMonth() + 1).padStart(2, '0');
       const anio = ahora.getFullYear();
       const nombre = `Backup (${dia}-${mes}-${anio})`;
-      const tamano = `${(Math.random() * 50 + 10).toFixed(1)} MB`;
+      const payload = { version: 1 as const, exportedAt: ahora.toISOString(), contribuyente, productos, clientes, documentos };
+      const tamano = `${(new Blob([JSON.stringify(payload)]).size / 1024).toFixed(1)} KB`;
 
       addBackup({
         id: generarId(),
@@ -23,6 +25,7 @@ export default function RespaldoPage() {
         fecha: ahora.toISOString(),
         tamano,
       });
+      descargarBackup(payload, nombre);
 
       setGenerando(false);
       addToast('exito', `Respaldo creado: ${nombre}`);
@@ -96,7 +99,11 @@ export default function RespaldoPage() {
                   </span>
                 )}
                 <button
-                  onClick={() => addToast('info', `Descargando: ${b.nombre}.zip`)}
+                  onClick={() => {
+                    const payload = { version: 1 as const, exportedAt: b.fecha, contribuyente, productos, clientes, documentos };
+                    descargarBackup(payload, b.nombre);
+                    addToast('exito', `Respaldo descargado: ${b.nombre}.json`);
+                  }}
                   className="btn-secondary text-xs"
                 >
                   <Download className="h-4 w-4" /> Descargar

@@ -4,9 +4,10 @@ import EstadoBadge from '@/components/EstadoBadge';
 import { formatMoneda, formatFechaHora, puedeInvalidar } from '@/utils/format';
 import { Search, Eye, Download, Mail, Ban, FileMinus2 } from 'lucide-react';
 import type { EstadoDocumento, TipoDocumento } from '@/types';
+import { descargarJSON, descargarPDF } from '@/utils/fileExport';
 
 export default function DocumentosPage() {
-  const { documentos, navigate, addToast } = useApp();
+  const { documentos, contribuyente, navigate, addToast } = useApp();
 
   const [filtroTipo, setFiltroTipo] = useState<TipoDocumento | 'Todos'>('Todos');
   const [filtroEstado, setFiltroEstado] = useState<EstadoDocumento | 'Todos'>('Todos');
@@ -129,14 +130,14 @@ export default function DocumentosPage() {
                             <Eye className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => addToast('info', `Descargando PDF: ${doc.numeroGeneracion}.pdf`)}
+                            onClick={() => { descargarPDF(doc, contribuyente); addToast('exito', `PDF descargado: ${doc.numeroGeneracion}.pdf`); }}
                             className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
                             title="Descargar PDF"
                           >
                             <Download className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => addToast('info', `Descargando JSON: ${doc.numeroGeneracion}.json`)}
+                            onClick={() => { descargarJSON(doc, contribuyente); addToast('exito', `JSON descargado: ${doc.numeroGeneracion}.json`); }}
                             className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
                             title="Descargar JSON"
                           >

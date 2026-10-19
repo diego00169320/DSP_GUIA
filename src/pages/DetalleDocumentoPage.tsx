@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   XCircle,
 } from 'lucide-react';
+import { descargarJSON, descargarPDF } from '@/utils/fileExport';
 
 export default function DetalleDocumentoPage() {
   const { documentos, contribuyente, clientes, navParams, navigate, invalidarDocumento, addToast } = useApp();
@@ -228,10 +229,10 @@ export default function DetalleDocumentoPage() {
           <ArrowLeft className="h-4 w-4" /> Volver
         </button>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => addToast('info', `Descargando PDF: ${doc.numeroGeneracion}.pdf`)} className="btn-secondary">
+          <button onClick={() => { descargarPDF(doc, contribuyente); addToast('exito', `PDF descargado: ${doc.numeroGeneracion}.pdf`); }} className="btn-secondary">
             <Download className="h-4 w-4" /> Descargar PDF
           </button>
-          <button onClick={() => addToast('info', `Descargando JSON: ${doc.numeroGeneracion}.json`)} className="btn-secondary">
+          <button onClick={() => { descargarJSON(doc, contribuyente); addToast('exito', `JSON descargado: ${doc.numeroGeneracion}.json`); }} className="btn-secondary">
             <Download className="h-4 w-4" /> Descargar JSON
           </button>
           {doc.envioCorreo && (

@@ -117,10 +117,10 @@ export function fechaLimiteCCF(fechaEmision: string): Date {
 
   let diasHabiles = 0;
   while (diasHabiles < 10) {
-    fecha.setDate(fecha.getDate() + 1);
     if (esDiaHabil(fecha)) {
       diasHabiles++;
     }
+    if (diasHabiles < 10) fecha.setDate(fecha.getDate() + 1);
   }
   return fecha;
 }
